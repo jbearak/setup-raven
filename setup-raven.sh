@@ -86,7 +86,10 @@ curl -fsSL --retry 3 --retry-delay 2 -o "$checksum_file" "${release_base}/${asse
 # Parse exactly one "<hex>  <name>" line. Validate both the 64-char hex digest
 # and the filename so a stray HTML body served with HTTP 200 fails as a
 # malformed checksum file rather than as a confusing hash mismatch.
-read -r expected_checksum expected_name extra < "$checksum_file" || fail "could not read checksum file for ${asset}"
+# `read` returns non-zero at EOF when the line has no trailing newline, even
+# though it populated the variables — so `|| true`, and let the digest/filename
+# validation below reject a genuinely empty or malformed file.
+read -r expected_checksum expected_name extra < "$checksum_file" || true
 expected_name="${expected_name#\*}"  # strip sha256sum binary-mode marker if present
 if [ -n "${extra:-}" ] || ! [[ "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]]; then
   fail "malformed checksum file for ${asset}"
@@ -113,7 +116,13 @@ echo "Checksum verified for ${asset}"
 if command -v unzip >/dev/null 2>&1; then
   unzip -q "$archive" -d "$extract_dir"
 elif command -v 7z >/dev/null 2>&1; then
-  7z x -y -o"$extract_dir" "$archive" >/dev/null
+  # 7z writes errors to stdout, so capture it and surface it only on failure
+  # (rather than discarding it) — otherwise a failed Windows extraction aborts
+  # with no diagnostic.
+  if ! extract_log="$(7z x -y -o"$extract_dir" "$archive" 2>&1)"; then
+    printf '%s\n' "$extract_log" >&2
+    fail "7z failed to extract ${asset}"
+  fi
 else
   fail "unzip or 7z is required to extract Raven"
 fi
