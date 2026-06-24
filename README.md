@@ -45,14 +45,14 @@ flags, and severity thresholds.
 
 ## Supported runners
 
-Linux and macOS on x64 or arm64, matching the release assets this action tests.
+Linux, macOS, and Windows, matching the platforms Raven publishes release
+binaries for. CI installs and runs on `ubuntu-latest`, `ubuntu-24.04-arm`,
+`macos-latest`, and `windows-latest`; the macOS x64 and Windows arm64 assets are
+supported by the same OS/arch mapping.
 
-Windows GitHub Actions runners are not a v1 target — but that is a limitation of
-this **action**, not of Raven. Raven itself runs on Windows and publishes Windows
-release binaries, so you can install it on a Windows runner by hand. There is
-rarely a reason to: Raven's analysis is platform-independent, so a Linux runner
-produces identical results and costs less (GitHub bills Windows runners at a
-higher minute rate).
+Raven's analysis is platform-independent — the same R source yields the same
+results on any OS — and Linux runners bill at the lowest rate, so Linux is
+usually the most economical choice for CI even though all three platforms work.
 
 ## Package metadata
 
