@@ -64,6 +64,11 @@ else
 fi
 
 runner_temp="${RUNNER_TEMP:-/tmp}"
+# On Windows RUNNER_TEMP uses backslashes (e.g. D:\a\_temp). Git Bash handles
+# forward-slash drive paths fine, and a backslash in a filename makes GNU
+# sha256sum escape its output line with a leading backslash — which would
+# corrupt the parsed checksum. Normalize to forward slashes to avoid both.
+runner_temp="${runner_temp//\\//}"
 workdir="${runner_temp}/setup-raven-${os}-${arch}-${RANDOM}-${RANDOM}"
 extract_dir="${workdir}/extract"
 bin_dir="${workdir}/bin"
