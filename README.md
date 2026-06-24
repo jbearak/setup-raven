@@ -46,8 +46,13 @@ flags, and severity thresholds.
 ## Supported runners
 
 Linux and macOS on x64 or arm64, matching the release assets this action tests.
-Windows release binaries exist, but Windows GitHub Actions runners are not a v1
-target.
+
+Windows GitHub Actions runners are not a v1 target — but that is a limitation of
+this **action**, not of Raven. Raven itself runs on Windows and publishes Windows
+release binaries, so you can install it on a Windows runner by hand. There is
+rarely a reason to: Raven's analysis is platform-independent, so a Linux runner
+produces identical results and costs less (GitHub bills Windows runners at a
+higher minute rate).
 
 ## Package metadata
 
