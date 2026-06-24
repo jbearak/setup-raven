@@ -13,13 +13,9 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "$1 is required to install Raven"
 }
 
-case "$version" in
-  latest | v[0-9]*)
-    ;;
-  *)
-    fail "version must be 'latest' or a Raven release tag"
-    ;;
-esac
+if [ "$version" != "latest" ] && ! [[ "$version" =~ ^v[0-9]+(\.[0-9]+){0,2}([-+][A-Za-z0-9._-]+)?$ ]]; then
+  fail "version must be 'latest' or a Raven release tag (e.g. v0.11.1)"
+fi
 
 runner_os="${RUNNER_OS:-$(uname -s)}"
 case "$runner_os" in
@@ -69,7 +65,11 @@ runner_temp="${RUNNER_TEMP:-/tmp}"
 # sha256sum escape its output line with a leading backslash — which would
 # corrupt the parsed checksum. Normalize to forward slashes to avoid both.
 runner_temp="${runner_temp//\\//}"
-workdir="${runner_temp}/setup-raven-${os}-${arch}-${RANDOM}-${RANDOM}"
+# mktemp -d gives a collision-free working dir (safer than $RANDOM on shared or
+# self-hosted runners). No cleanup trap: bin_dir lives under workdir and is put
+# on GITHUB_PATH for later job steps, so it must outlive this script. The runner
+# is ephemeral and reclaims RUNNER_TEMP itself.
+workdir="$(mktemp -d "${runner_temp}/setup-raven-${os}-${arch}.XXXXXX")"
 extract_dir="${workdir}/extract"
 bin_dir="${workdir}/bin"
 archive="${workdir}/${asset}"
@@ -83,9 +83,16 @@ echo "Downloading ${asset} from ${release_repository} (${version})"
 curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "${release_base}/${asset}"
 curl -fsSL --retry 3 --retry-delay 2 -o "$checksum_file" "${release_base}/${asset}.sha256"
 
-expected_checksum="$(awk '{print $1; exit}' "$checksum_file")"
-if [ -z "$expected_checksum" ]; then
-  fail "empty checksum file for ${asset}"
+# Parse exactly one "<hex>  <name>" line. Validate both the 64-char hex digest
+# and the filename so a stray HTML body served with HTTP 200 fails as a
+# malformed checksum file rather than as a confusing hash mismatch.
+read -r expected_checksum expected_name extra < "$checksum_file" || fail "could not read checksum file for ${asset}"
+expected_name="${expected_name#\*}"  # strip sha256sum binary-mode marker if present
+if [ -n "${extra:-}" ] || ! [[ "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]]; then
+  fail "malformed checksum file for ${asset}"
+fi
+if [ "$expected_name" != "$asset" ]; then
+  fail "checksum file names '${expected_name:-<missing>}', expected '${asset}'"
 fi
 
 if command -v sha256sum >/dev/null 2>&1; then
@@ -111,20 +118,22 @@ else
   fail "unzip or 7z is required to extract Raven"
 fi
 
+# Require the binary at the archive root, as a regular non-symlink file, so a
+# changed archive layout fails loudly rather than silently picking up the wrong
+# file.
 binary="${extract_dir}/${bin_name}"
-if [ ! -f "$binary" ]; then
-  binary="$(find "$extract_dir" -type f -name "$bin_name" -print -quit)"
-fi
-if [ -z "$binary" ] || [ ! -f "$binary" ]; then
-  fail "archive did not contain ${bin_name}"
+if [ ! -f "$binary" ] || [ -L "$binary" ]; then
+  fail "archive must contain a regular ${bin_name} at its root"
 fi
 
 cp "$binary" "${bin_dir}/${bin_name}"
 chmod +x "${bin_dir}/${bin_name}"
 
+# Put the binary on PATH for later workflow steps. (No in-script PATH export:
+# the smoke test below calls the absolute path, and a Windows-style bin_dir like
+# D:/... would split Bash's colon-separated PATH at the drive-letter colon.)
 if [ -n "${GITHUB_PATH:-}" ]; then
   echo "$bin_dir" >> "$GITHUB_PATH"
 fi
-export PATH="${bin_dir}:${PATH}"
 
 "${bin_dir}/${bin_name}" --version

@@ -45,14 +45,7 @@ flags, and severity thresholds.
 
 ## Supported runners
 
-Linux, macOS, and Windows, matching the platforms Raven publishes release
-binaries for. CI installs and runs on `ubuntu-latest`, `ubuntu-24.04-arm`,
-`macos-latest`, and `windows-latest`; the macOS x64 and Windows arm64 assets are
-supported by the same OS/arch mapping.
-
-Raven's analysis is platform-independent — the same R source yields the same
-results on any OS — and Linux runners bill at the lowest rate, so Linux is
-usually the most economical choice for CI even though all three platforms work.
+macOS, Windows, and Linux runners.
 
 ## Package metadata
 

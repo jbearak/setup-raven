@@ -26,3 +26,17 @@ jobs:
           version: latest
 
       - run: raven --version
+
+  install-pinned:
+    name: Install pinned tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Exercises the pinned-tag URL branch (releases/download/<tag>) rather than
+      # releases/latest/download. Uses a known-good published tag.
+      - uses: ./
+        with:
+          version: v0.11.1
+
+      - run: raven --version
