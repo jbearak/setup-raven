@@ -29,8 +29,11 @@ case "$runner_os" in
   macOS | Darwin | darwin*)
     os="macos"
     ;;
+  Windows | Windows_NT | windows* | MINGW* | MSYS* | CYGWIN*)
+    os="windows"
+    ;;
   *)
-    fail "unsupported runner OS: ${runner_os}. setup-raven currently supports Linux and macOS runners."
+    fail "unsupported runner OS: ${runner_os}. setup-raven supports Linux, macOS, and Windows runners."
     ;;
 esac
 
@@ -46,6 +49,12 @@ case "$runner_arch" in
     fail "unsupported runner architecture: ${runner_arch}. setup-raven supports x64 and arm64 runners."
     ;;
 esac
+
+# Windows release archives ship raven.exe; Linux/macOS ship raven.
+bin_name="raven"
+if [ "$os" = "windows" ]; then
+  bin_name="raven.exe"
+fi
 
 asset="raven-${os}-${arch}.zip"
 if [ "$version" = "latest" ]; then
@@ -64,7 +73,6 @@ checksum_file="${workdir}/${asset}.sha256"
 mkdir -p "$extract_dir" "$bin_dir"
 
 require_command curl
-require_command unzip
 
 echo "Downloading ${asset} from ${release_repository} (${version})"
 curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "${release_base}/${asset}"
@@ -88,22 +96,30 @@ if [ "$actual_checksum" != "$expected_checksum" ]; then
 fi
 
 echo "Checksum verified for ${asset}"
-unzip -q "$archive" -d "$extract_dir"
 
-binary="${extract_dir}/raven"
+# unzip is standard on Linux/macOS runners; Windows runners ship 7z instead.
+if command -v unzip >/dev/null 2>&1; then
+  unzip -q "$archive" -d "$extract_dir"
+elif command -v 7z >/dev/null 2>&1; then
+  7z x -y -o"$extract_dir" "$archive" >/dev/null
+else
+  fail "unzip or 7z is required to extract Raven"
+fi
+
+binary="${extract_dir}/${bin_name}"
 if [ ! -f "$binary" ]; then
-  binary="$(find "$extract_dir" -type f -name raven -print -quit)"
+  binary="$(find "$extract_dir" -type f -name "$bin_name" -print -quit)"
 fi
 if [ -z "$binary" ] || [ ! -f "$binary" ]; then
-  fail "archive did not contain raven"
+  fail "archive did not contain ${bin_name}"
 fi
 
-cp "$binary" "${bin_dir}/raven"
-chmod +x "${bin_dir}/raven"
+cp "$binary" "${bin_dir}/${bin_name}"
+chmod +x "${bin_dir}/${bin_name}"
 
 if [ -n "${GITHUB_PATH:-}" ]; then
   echo "$bin_dir" >> "$GITHUB_PATH"
 fi
 export PATH="${bin_dir}:${PATH}"
 
-"${bin_dir}/raven" --version
+"${bin_dir}/${bin_name}" --version
