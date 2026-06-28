@@ -3,11 +3,16 @@
 A GitHub Action that installs the [Raven](https://github.com/jbearak/raven) CLI
 from prebuilt release binaries.
 
-**Raven** is a fast R language server and static analyzer, written in Rust. It
-analyzes R **without running it** — surfacing undefined symbols, cross-file
-problems, and style issues — and ships both editor integrations (diagnostics,
-completion, hover, go-to-definition) and a CLI (`raven check`, `raven lint`) for
-continuous integration.
+**Raven** is a static analyzer for the R programming language. It reads R
+projects without running them, follows `source()` chains, and flags issues such
+as undefined symbols, used-before-defined references, cross-file problems, and
+style issues. In CI, `raven check` gives R projects the kind of fast,
+side-effect-free pre-merge check that other language ecosystems take for
+granted.
+
+Raven also powers editor features through the Language Server Protocol:
+diagnostics, completion, hover, go-to-definition, and other code intelligence
+use the same static scope model that `raven check` runs headlessly.
 
 Raven's sibling project [Sight](https://github.com/jbearak/sight) provides the
 same static-analysis and language-server model for Stata. Together, Raven and
