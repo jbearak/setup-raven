@@ -9,6 +9,13 @@ problems, and style issues — and ships both editor integrations (diagnostics,
 completion, hover, go-to-definition) and a CLI (`raven check`, `raven lint`) for
 continuous integration.
 
+Raven's sibling project [Sight](https://github.com/jbearak/sight) provides the
+same static-analysis and language-server model for Stata. Together, Raven and
+Sight bring cross-file navigation, error detection, and code intelligence to two
+languages widely used in social science research; `setup-raven` and
+[`setup-sight`](https://github.com/jbearak/setup-sight) make their headless CLI
+checks easy to install in CI.
+
 ## Why this action exists
 
 The released way to get Raven is a prebuilt binary from
